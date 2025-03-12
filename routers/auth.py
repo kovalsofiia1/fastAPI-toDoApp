@@ -9,7 +9,7 @@ from typing import Optional
 import models
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
-from database import SessionLocal, engine
+from database import SessionLocal, engine, get_db
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from datetime import datetime, timedelta
 from jose import jwt, JWTError
@@ -49,13 +49,13 @@ class LoginForm:
         self.password = form.get("password")
 
 
-def get_db():
-    try:
-        db = SessionLocal()
-        yield db
-    finally:
-        db.close()
-
+# def get_db():
+#     try:
+#         db = SessionLocal()
+#         yield db
+#     finally:
+#         db.close()
+#
 
 def get_password_hash(password):
     return bcrypt_context.hash(password)

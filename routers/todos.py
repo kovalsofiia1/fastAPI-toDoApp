@@ -6,7 +6,7 @@ from starlette.responses import RedirectResponse
 
 from fastapi import Depends, APIRouter, Request, Form
 import models
-from database import engine, SessionLocal
+from database import engine, get_db
 from sqlalchemy.orm import Session
 from .auth import get_current_user
 
@@ -25,13 +25,13 @@ models.Base.metadata.create_all(bind=engine)
 templates = Jinja2Templates(directory="templates")
 
 
-def get_db():
-    try:
-        db = SessionLocal()
-        yield db
-    finally:
-        db.close()
-
+# def get_db():
+#     try:
+#         db = SessionLocal()
+#         yield db
+#     finally:
+#         db.close()
+#
 
 @router.get("/", response_class=HTMLResponse)
 async def read_all_by_user(request: Request, db: Session = Depends(get_db)):
