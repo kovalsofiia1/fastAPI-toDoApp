@@ -77,10 +77,10 @@ def authenticate_user(username: str, password: str, db):
     return user
 
 
-def create_access_token(username: str, user_id: int,
+def create_access_token(username: str, user_id: int, role: str,
                         expires_delta: Optional[timedelta] = None):
 
-    encode = {"sub": username, "id": user_id}
+    encode = {"sub": username, "id": user_id, "role": role}
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
@@ -97,9 +97,10 @@ async def get_current_user(request: Request):
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
         user_id: int = payload.get("id")
+        role: str = payload.get("role")
         if username is None or user_id is None:
             logout(request)
-        return {"username": username, "id": user_id}
+        return {"username": username, "id": user_id, "role": role}
     except JWTError:
         raise HTTPException(status_code=404, detail="Not found")
 
@@ -113,6 +114,7 @@ async def login_for_access_token(response: Response, form_data: OAuth2PasswordRe
     token_expires = timedelta(minutes=60)
     token = create_access_token(user.username,
                                 user.id,
+                                user.role,
                                 expires_delta=token_expires)
 
     response.set_cookie(key="access_token", value=token, httponly=True)
@@ -163,7 +165,6 @@ async def register_user(request: Request, email: str = Form(...), username: str 
                         db: Session = Depends(get_db)):
 
     validation1 = db.query(models.Users).filter(models.Users.username == username).first()
-
     validation2 = db.query(models.Users).filter(models.Users.email == email).first()
 
     if password != password2 or validation1 is not None or validation2 is not None:
@@ -179,6 +180,7 @@ async def register_user(request: Request, email: str = Form(...), username: str 
     hash_password = get_password_hash(password)
     user_model.hashed_password = hash_password
     user_model.is_active = True
+    user_model.role = "user"  # Assign default role
 
     db.add(user_model)
     db.commit()

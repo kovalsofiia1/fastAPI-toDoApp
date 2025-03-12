@@ -13,6 +13,7 @@ class Users(Base):
     last_name = Column(String)
     hashed_password = Column(String)
     is_active = Column(Boolean, default=True)
+    role = Column(String, default="user")  # Default role is "user"
 
     todos = relationship("Todos", back_populates="owner")
 
