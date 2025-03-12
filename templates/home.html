@@ -14,6 +14,8 @@
                 <tr>
                     <th scope="col">#</th>
                     <th scope="col">Info</th>
+                    <th scope="col">Priority</th>
+                    <th scope="col">Categories</th>
                     <th scope="col">Actions</th>
 
                 </tr>
@@ -26,6 +28,14 @@
 
                     <td>{{loop.index}}</td>
                     <td>{{todo.title}}</td>
+                    <td>{{todo.priority}}</td>
+                    <td>
+                        <ul>
+                            {% for tc in todo.categories %}
+                            <li>{{ tc.name }}</li>
+                            {% endfor %}
+                        </ul>
+                    </td>
                     <td>
                         <button onclick="window.location.href='complete/{{todo.id}}'"
                                 type="button" class="btn btn-success">Complete</button>
@@ -41,6 +51,14 @@
 
                     <td>{{loop.index}}</td>
                     <td class="strike-through-td">{{todo.title}}</td>
+                    <td>{{todo.priority}}</td>
+                    <td>
+                        <ul>
+                            {% for tc in todo.categories %}
+                            <li>{{ tc.name }}</li>
+                            {% endfor %}
+                        </ul>
+                    </td>
                     <td>
                         <button onclick="window.location.href='complete/{{todo.id}}'"
                                 type="button" class="btn btn-success">Undo

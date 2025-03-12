@@ -29,6 +29,11 @@ class Todos(Base):
     owner_id = Column(Integer, ForeignKey("users.id"))
 
     owner = relationship("Users", back_populates="todos")
+    categories = relationship(
+        "Category",
+        secondary="todo_category",  # This is the association table
+        back_populates="todos"  # This connects with the Category model
+    )
 
 
 class Category(Base):
@@ -37,3 +42,21 @@ class Category(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True)
     description = Column(String)
+
+    todos = relationship(
+        "Todos",
+        secondary="todo_category",  # This is the association table
+        back_populates="categories"  # This connects with the Todos model
+    )
+
+
+# Association table for many-to-many relationship
+class TodoCategory(Base):
+    __tablename__ = "todo_category"
+
+    id = Column(Integer, primary_key=True, index=True)
+    todo_id = Column(Integer, ForeignKey("todos.id"))
+    category_id = Column(Integer, ForeignKey("categories.id"))
+
+    todo = relationship("Todos")
+    category = relationship("Category")  # Remove `back_populates`
