@@ -6,7 +6,19 @@ from database import engine
 from routers import auth, todos, categories
 from starlette.staticfiles import StaticFiles
 
-app = FastAPI(debug=True)
+app = FastAPI(debug=True,
+              title="Мій Todo API",
+              description="Цей API дозволяє керувати списком завдань.",
+              version="1.0.1",
+              contact={
+                  "name": "Підтримка",
+                  "email": "support@example.com",
+              },
+              license_info={
+                  "name": "MIT",
+                  "url": "https://opensource.org/licenses/MIT",
+              },
+              )
 
 models.Base.metadata.create_all(bind=engine)
 

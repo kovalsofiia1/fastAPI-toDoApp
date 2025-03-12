@@ -36,6 +36,9 @@ router = APIRouter(
     responses={401: {"user": "Not authorized"}}
 )
 
+class Token(BaseModel):
+    access_token: str
+    token_type: str
 
 class LoginForm:
     def __init__(self, request: Request):
@@ -48,14 +51,6 @@ class LoginForm:
         self.username = form.get("email")
         self.password = form.get("password")
 
-
-# def get_db():
-#     try:
-#         db = SessionLocal()
-#         yield db
-#     finally:
-#         db.close()
-#
 
 def get_password_hash(password):
     return bcrypt_context.hash(password)
@@ -105,21 +100,32 @@ async def get_current_user(request: Request):
         raise HTTPException(status_code=404, detail="Not found")
 
 
-@router.post("/token")
-async def login_for_access_token(response: Response, form_data: OAuth2PasswordRequestForm = Depends(),
-                                 db: Session = Depends(get_db)):
+@router.post("/token", response_model=Token, summary="User login",
+             description="Logs in a user and returns an access token.")
+async def login_for_access_token(
+        response: Response,
+        form_data: OAuth2PasswordRequestForm = Depends(),
+        db: Session = Depends(get_db)
+):
+    """
+    Authenticate a user and return an access token.
+
+    - **username**: User's username or email.
+    - **password**: User's password.
+
+    Returns:
+    - A JWT token if authentication is successful.
+    - `401 Unauthorized` if authentication fails.
+    """
     user = authenticate_user(form_data.username, form_data.password, db)
     if not user:
-        return False
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+
     token_expires = timedelta(minutes=60)
-    token = create_access_token(user.username,
-                                user.id,
-                                user.role,
-                                expires_delta=token_expires)
+    token = create_access_token(user.username, user.id, user.role, expires_delta=token_expires)
 
     response.set_cookie(key="access_token", value=token, httponly=True)
-
-    return True
+    return {"access_token": token, "token_type": "bearer"}
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -145,45 +151,61 @@ async def login(request: Request, db: Session = Depends(get_db)):
         return templates.TemplateResponse("login.html", {"request": request, "msg": msg})
 
 
-@router.get("/logout")
+@router.get("/logout", summary="Logout user", description="Logs out the user by deleting the access token.")
 async def logout(request: Request):
-    msg = "Logout Successful"
-    response = templates.TemplateResponse("login.html", {"request": request, "msg": msg})
+    """
+    Logs out the user by deleting the authentication cookie.
+    """
+    response = templates.TemplateResponse("login.html", {"request": request, "msg": "Logout Successful"})
     response.delete_cookie(key="access_token")
     return response
-
 
 @router.get("/register", response_class=HTMLResponse)
 async def register(request: Request):
     return templates.TemplateResponse("register.html", {"request": request})
 
 
-@router.post("/register", response_class=HTMLResponse)
-async def register_user(request: Request, email: str = Form(...), username: str = Form(...),
-                        firstname: str = Form(...), lastname: str = Form(...),
-                        password: str = Form(...), password2: str = Form(...),
-                        db: Session = Depends(get_db)):
+@router.post("/register", response_class=HTMLResponse, summary="User registration", description="Registers a new user.")
+async def register_user(
+        request: Request,
+        email: str = Form(...),
+        username: str = Form(...),
+        firstname: str = Form(...),
+        lastname: str = Form(...),
+        password: str = Form(...),
+        password2: str = Form(...),
+        db: Session = Depends(get_db)
+):
+    """
+    Registers a new user with the provided details.
 
+    - **email**: User's email.
+    - **username**: Chosen username.
+    - **firstname**: First name.
+    - **lastname**: Last name.
+    - **password**: Password (must match `password2`).
+
+    Returns:
+    - Success message if registration is successful.
+    - Error message if the username or email is already taken.
+    """
     validation1 = db.query(models.Users).filter(models.Users.username == username).first()
     validation2 = db.query(models.Users).filter(models.Users.email == email).first()
 
     if password != password2 or validation1 is not None or validation2 is not None:
-        msg = "Invalid registration request"
-        return templates.TemplateResponse("register.html", {"request": request, "msg": msg})
+        return templates.TemplateResponse("register.html", {"request": request, "msg": "Invalid registration request"})
 
-    user_model = models.Users()
-    user_model.username = username
-    user_model.email = email
-    user_model.first_name = firstname
-    user_model.last_name = lastname
-
-    hash_password = get_password_hash(password)
-    user_model.hashed_password = hash_password
-    user_model.is_active = True
-    user_model.role = "user"  # Assign default role
+    user_model = models.Users(
+        username=username,
+        email=email,
+        first_name=firstname,
+        last_name=lastname,
+        hashed_password=get_password_hash(password),
+        is_active=True,
+        role="user"
+    )
 
     db.add(user_model)
     db.commit()
 
-    msg = "User successfully created"
-    return templates.TemplateResponse("login.html", {"request": request, "msg": msg})
+    return templates.TemplateResponse("login.html", {"request": request, "msg": "User successfully created"})
