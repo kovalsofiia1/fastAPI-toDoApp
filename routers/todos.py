@@ -149,6 +149,6 @@ async def delete_todo(request: Request, todo_id: int = Path(..., description="ID
     todo_model = db.query(models.Todos).filter(models.Todos.id == todo_id, models.Todos.owner_id == user.get("id")).first()
     if todo_model is None:
         return RedirectResponse(url="/todos", status_code=status.HTTP_302_FOUND)
-    db.delete(todo_model)
+    db.query(models.Todos).filter(models.Todos.id == todo_id, models.Todos.owner_id == user.get("id")).delete()
     db.commit()
     return RedirectResponse(url="/todos", status_code=status.HTTP_302_FOUND)

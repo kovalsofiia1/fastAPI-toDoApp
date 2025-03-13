@@ -2,7 +2,6 @@ from sqlalchemy import Boolean, Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
 from database import Base
 
-
 class Users(Base):
     __tablename__ = "users"
 
@@ -16,7 +15,6 @@ class Users(Base):
     role = Column(String, default="user")  # Default role is "user"
 
     todos = relationship("Todos", back_populates="owner")
-
 
 class Todos(Base):
     __tablename__ = "todos"
@@ -34,7 +32,6 @@ class Todos(Base):
         secondary="todo_category",  # This is the association table
         back_populates="todos"  # This connects with the Category model
     )
-
 
 class Category(Base):
     __tablename__ = "categories"
