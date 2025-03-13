@@ -54,9 +54,9 @@ The API will be available at `http://127.0.0.1:8000/`
 - `GET /todos/add-todo` - Display form to add a new Todo (HTML)
 - `POST /todos/add-todo` - Create a new Todo
 - `GET /todos/edit-todo/{todo_id}` - Display form to edit an existing Todo (HTML)
-
-- `POST /todos/edit-todo/{todo_id}` - Update a specific Todo
-- `GET /todos/delete/{todo_id}` - Delete a Todo
+- `PUT /todos/edit-todo/{todo_id}` - Update a specific Todo
+- `PATCH /todos/complete/{todo_id}` - Toggle complete of a specific Todo
+- `DELETE /todos/delete/{todo_id}` - Delete a Todo
 
 ### Categories (Admin Only)
 - `GET /categories/` - List all Categories (HTML)
