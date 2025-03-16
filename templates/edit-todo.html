@@ -45,25 +45,20 @@
             document.getElementById("editTodoForm").addEventListener("submit", async function(event) {
                 event.preventDefault();
 
-                const todoId = document.getElementById("todoId").value;
-                const title = document.getElementById("title").value;
-                const description = document.getElementById("description").value;
-                const priority = document.getElementById("priority").value;
+                const formData = new FormData();
+                formData.append("title", document.getElementById("title").value);
+                formData.append("description", document.getElementById("description").value);
+                formData.append("priority", document.getElementById("priority").value);
 
-                // Collect selected category IDs
-                const selectedCategories = [...document.querySelectorAll("select[name='category_ids'] option:checked")].map(opt => parseInt(opt.value));
+                // Додаємо всі обрані категорії
+                const selectedCategories = [...document.querySelectorAll("select[name='category_ids'] option:checked")].map(opt => opt.value);
+                selectedCategories.forEach(id => formData.append("category_ids", id));
+
+                const todoId = document.getElementById("todoId").value;
 
                 const response = await fetch(`/todos/edit-todo/${todoId}`, {
                     method: "PUT",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        title: title,
-                        description: description,
-                        priority: parseInt(priority),
-                        category_ids: selectedCategories
-                    })
+                    body: formData
                 });
 
                 if (response.ok) {
