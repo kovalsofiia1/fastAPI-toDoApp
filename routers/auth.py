@@ -359,7 +359,7 @@ async def register_user(request: Request, email: str = Form(...), username: str 
     hashed_password = get_password_hash(password)
     execute_query(
         "INSERT INTO users (username, email, first_name, last_name, hashed_password, is_active, role) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-        (username, email, firstname, lastname, hashed_password, True, "user"))
+        (username, email, firstname, lastname, hashed_password, True, "user"), fetch=False)
 
     return templates.TemplateResponse("login.html", {"request": request, "msg": "User successfully created"})
 

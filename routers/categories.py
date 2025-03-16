@@ -142,7 +142,7 @@ async def create_category(request: Request, name: str = Form(...), description: 
     existing_category = fetch_one("SELECT * FROM categories WHERE name = %s", (name,))
     if existing_category:
         return templates.TemplateResponse("category_form.html", {"request": request, "msg": "Category already exists", "user": user, "action": "Create"})
-    execute_query("INSERT INTO categories (name, description) VALUES (%s, %s)", (name, description))
+    execute_query("INSERT INTO categories (name, description) VALUES (%s, %s)", (name, description), fetch=False)
     return RedirectResponse(url="/categories", status_code=303)
 
 @router.get("/edit/{category_id}", response_class=HTMLResponse)
@@ -159,7 +159,7 @@ async def update_category(request: Request, category_id: int, name: str = Form(.
     category = fetch_one("SELECT * FROM categories WHERE id = %s", (category_id,))
     if category is None:
         raise HTTPException(status_code=404, detail="Category not found")
-    execute_query("UPDATE categories SET name = %s, description = %s WHERE id = %s", (name, description, category_id))
+    execute_query("UPDATE categories SET name = %s, description = %s WHERE id = %s", (name, description, category_id), fetch=False)
     return RedirectResponse(url="/categories", status_code=303)
 
 @router.get("/delete/{category_id}", response_class=HTMLResponse)
@@ -168,5 +168,5 @@ async def delete_category(category_id: int, user: dict = Depends(get_current_use
     category = fetch_one("SELECT * FROM categories WHERE id = %s", (category_id,))
     if category is None:
         raise HTTPException(status_code=404, detail="Category not found")
-    execute_query("DELETE FROM categories WHERE id = %s", (category_id,))
+    execute_query("DELETE FROM categories WHERE id = %s", (category_id,), fetch=False)
     return RedirectResponse(url="/categories", status_code=303)

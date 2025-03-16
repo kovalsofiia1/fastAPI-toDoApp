@@ -196,7 +196,8 @@ async def read_all_by_user(request: Request):
         JOIN todo_category tc ON c.id = tc.category_id
         WHERE tc.todo_id = %s;
         """
-        todo["categories"] = execute_query(query, (todo["id"],), fetch=True)
+        categories = execute_query(query, (todo["id"],), fetch=True)
+        todo["categories"] = [{"id": c[0], "name": c[1]} for c in categories]
 
     print(query)
     print("Fetched Todos:", todos)  # Додай це
@@ -274,8 +275,6 @@ async def edit_todo(request: Request, todo_id: int = Path(..., description="ID o
     # Отримуємо категорії, пов'язані з цим todo
     query = """
         SELECT c.id, c.name FROM categories c
-        JOIN todo_category tc ON c.id = tc.category_id
-        WHERE tc.todo_id = %s;
     """
     categories = execute_query(query, (todo_id,))
 
@@ -284,6 +283,13 @@ async def edit_todo(request: Request, todo_id: int = Path(..., description="ID o
 
     selected_categories = [c["id"] for c in todo["categories"]]
 
+    print({
+            "request": request,
+            "todo": todo,
+            "user": user,
+            "categories": todo["categories"],
+            "selected_categories": selected_categories
+        })
     return templates.TemplateResponse("edit-todo.html", {
         "request": request,
         "todo": todo,
