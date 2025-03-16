@@ -1,8 +1,6 @@
 from fastapi import FastAPI, Depends
 from starlette.responses import RedirectResponse
 
-import models
-# from database import engine
 from routers import auth, todos, categories
 from starlette.staticfiles import StaticFiles
 
@@ -20,7 +18,6 @@ app = FastAPI(debug=True,
               },
               )
 
-# models.Base.metadata.create_all(bind=engine)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
