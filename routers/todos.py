@@ -1,6 +1,7 @@
 import sys
 from http.client import HTTPException
-from typing import List
+from fastapi import Query
+from typing import List, Optional
 from pydantic import BaseModel
 sys.path.append("..")
 from starlette import status
@@ -22,17 +23,36 @@ router = APIRouter(
 models.Base.metadata.create_all(bind=engine)
 templates = Jinja2Templates(directory="templates")
 
-@router.get("/", response_class=HTMLResponse, summary="List all Todos", description="Fetch all todo items belonging to the current user.")
-async def read_all_by_user(request: Request, db: Session = Depends(get_db)):
-    """
-    Retrieves all todo items belonging to the authenticated user.
-    - **Returns**: Rendered HTML page with user's todos.
-    """
+@router.get("/", response_class=HTMLResponse, summary="List all Todos")
+async def read_all_by_user(
+        request: Request,
+        db: Session = Depends(get_db),
+        completed: Optional[str] = Query(None),  # Simple query parameter, no description
+        sort_by: Optional[str] = Query(None),
+        sort_order: Optional[int] = Query(1)
+):
     user = await get_current_user(request)
     if user is None:
         return RedirectResponse(url="/auth", status_code=status.HTTP_302_FOUND)
-    todos = db.query(models.Todos).filter(models.Todos.owner_id == user.get("id")).all()
-    return templates.TemplateResponse("home.html", {"request": request, "todos": todos, "user": user})
+
+    query = db.query(models.Todos).filter(models.Todos.owner_id == user.get("id"))
+
+    # Apply filtering if completed is provided
+    if completed and completed != "all":
+        completed_value = completed.lower() == 'true'
+        query = query.filter(models.Todos.complete == completed_value)
+
+    # Apply sorting if required
+    if sort_by:
+        if sort_order == 1:
+            query = query.order_by(getattr(models.Todos, sort_by).asc())
+        elif sort_order == -1:
+            query = query.order_by(getattr(models.Todos, sort_by).desc())
+
+    # Fetch the results
+    todos = query.all()
+
+    return templates.TemplateResponse("home.html", {"request": request, "todos": todos, "user": user, "completed": completed})
 
 @router.get("/add-todo", response_class=HTMLResponse, summary="Display Add Todo Form", description="Renders a form to create a new todo item.")
 async def add_new_todo(request: Request, db: Session = Depends(get_db)):
