@@ -1,104 +1,127 @@
 {% include 'layout.html' %}
 
-<div class="container">
-    <div class="card text-center">
-        <div class="card-header">
-            Your Todos!
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header text-center">
+            <h3>Your Todos</h3>
         </div>
         <div class="card-body">
-            <h5 class="card-title">List of your Todos!</h5>
-            <p class="card-text">Information regarding stuff that needs to be complete</p>
+            <h5 class="card-title">Manage your tasks efficiently</h5>
 
-            <table class="table table-hover">
-                <thead>
+            <!-- Фільтрація задач -->
+            <div class="mb-3">
+                <label for="filterStatus">Filter tasks:</label>
+                <select id="filterStatus" class="form-control" onchange="filterTasks()">
+                    <option value="all" {% if completed is none or completed == 'all' %}selected{% endif %}>All</option>
+                    <option value="pending" {% if completed == 'false' %}selected{% endif %}>Pending</option>
+                    <option value="completed" {% if completed == 'true' %}selected{% endif %}>Completed</option>
+                </select>
+            </div>
+
+            <table class="table table-bordered">
+                <thead class="thead-dark">
                 <tr>
-                    <th scope="col">#</th>
-                    <th scope="col">Info</th>
-                    <th scope="col">Priority</th>
-                    <th scope="col">Categories</th>
-                    <th scope="col">Actions</th>
-
+                    <th>#</th>
+                    <th onclick="sortBy('title')">Info</th>
+                    <th onclick="sortBy('priority')">Priority</th>
+                    <th>Categories</th>
+                    <th>Actions</th>
                 </tr>
                 </thead>
                 <tbody>
 
                 {% for todo in todos %}
-                {% if todo.complete == False %}
-                <tr class="pointer">
-
-                    <td>{{loop.index}}</td>
-                    <td>{{todo.title}}</td>
-                    <td>{{todo.priority}}</td>
+                <tr class="{% if todo.complete %}table-success completed-task{% else %}pending-task{% endif %}">
+                    <td>{{ loop.index }}</td>
                     <td>
-                        <ul>
-                            {% for tc in todo.categories %}
-                            <li>{{ tc.name }}</li>
-                            {% endfor %}
-                        </ul>
+                        {% if todo.complete %}
+                            <del>{{ todo.title }}</del>
+                        {% else %}
+                            {{ todo.title }}
+                        {% endif %}
+                    </td>
+                    <td><span class="badge badge-pill badge-primary">{{ todo.priority }}</span></td>
+                    <td>
+                        {% for tc in todo.categories %}
+                            <span class="badge badge-info">{{ tc.name }}</span>
+                        {% endfor %}
                     </td>
                     <td>
-                        <button onclick="completeTodo({{ todo.id }})" type="button" class="btn btn-success">Complete</button>
-                        <button onclick="window.location.href='edit-todo/{{todo.id}}'"
-                                type="button" class="btn btn-info">
-                            Edit
+                        <button onclick="completeTodo('{{ todo.id }}')" class="btn btn-sm btn-success">
+                            {% if todo.complete %}
+                                <i class="fas fa-undo"></i> Undo
+                            {% else %}
+                                <i class="fas fa-check"></i> Complete
+                            {% endif %}
                         </button>
-                        <button onclick="deleteTodo({{ todo.id }})" type="button" class="btn btn-danger">
-                            Delete
+                        <button onclick="window.location.href='edit-todo/{{ todo.id }}'" class="btn btn-sm btn-info">
+                            <i class="fas fa-edit"></i> Edit
                         </button>
-                    </td>
-                </tr>
-
-                {% else %}
-                <tr class="pointer alert alert-success table-success" >
-
-                    <td>{{loop.index}}</td>
-                    <td class="strike-through-td">{{todo.title}}</td>
-                    <td>{{todo.priority}}</td>
-                    <td>
-                        <ul>
-                            {% for tc in todo.categories %}
-                            <li>{{ tc.name }}</li>
-                            {% endfor %}
-                        </ul>
-                    </td>
-                    <td>
-                        <button onclick="completeTodo({{ todo.id }})" type="button" class="btn btn-success">Undo</button>
-                        <button onclick="window.location.href='edit-todo/{{todo.id}}'"
-                                type="button" class="btn btn-info">
-                            Edit
-                        </button>
-                        <button onclick="deleteTodo({{ todo.id }})" type="button" class="btn btn-danger">
-                            Delete
+                        <button onclick="deleteTodo('{{ todo.id }}')" class="btn btn-sm btn-danger">
+                            <i class="fas fa-trash"></i> Delete
                         </button>
                     </td>
                 </tr>
-
-                {% endif %}
                 {% endfor %}
 
                 </tbody>
             </table>
 
-            <a href="add-todo" class="btn btn-primary">Add a new Todo!</a>
+            <a href="add-todo" class="btn btn-primary"><i class="fas fa-plus"></i> Add a new Todo</a>
         </div>
     </div>
 </div>
 
 <script>
+    // Handle complete/incomplete task toggle
     function completeTodo(todoId) {
         fetch(`/todos/complete/${todoId}`, {
-            method: "PATCH"
-        }).then(() => {
-            window.location.href = "/todos";
+            method: "PATCH",
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                return response.json().then(err => { alert(err.message); });
+            }
         });
     }
+
+    // Handle task deletion
     function deleteTodo(todoId) {
         if (confirm("Are you sure you want to delete this task?")) {
             fetch(`/todos/delete/${todoId}`, {
-                method: "DELETE"
-            }).then(() => {
-                window.location.href = "/todos";
-            });
+                method: "DELETE",
+            })
+            .then(response => {
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    return response.json().then(err => { alert(err.message); });
+                }
+            })
+            .catch(error => console.error("Error deleting todo:", error));
         }
+    }
+
+    // Filter the tasks based on completion status
+    function filterTasks() {
+        const filter = document.getElementById("filterStatus").value;
+        const url = new URL(window.location.href);
+
+        url.searchParams.set('completed', filter === 'all' ? 'all' : (filter === 'completed' ? 'true' : 'false')); // Add filter to URL
+        url.searchParams.set('sort_order', url.searchParams.get('sort_order') || '1');
+        url.searchParams.set('sort_by', url.searchParams.get('sort_by') || 'title');
+
+        window.location.href = url.toString();
+    }
+
+    // Sort the tasks by a given column
+    function sortBy(column) {
+        const url = new URL(window.location.href);
+        let currentSortOrder = url.searchParams.get('sort_order') === '1' ? -1 : 1;
+        url.searchParams.set('sort_by', column);
+        url.searchParams.set('sort_order', currentSortOrder.toString());
+        window.location.href = url.toString();
     }
 </script>

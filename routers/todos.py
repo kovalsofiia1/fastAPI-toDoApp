@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, Depends, HTTPException, Form, Path, Query
 from fastapi.responses import RedirectResponse, HTMLResponse
-from typing import List
+from typing import List, Optional
 
 from starlette import status
 
@@ -14,12 +14,31 @@ router = APIRouter(
 )
 
 @router.get("/", response_class=HTMLResponse, summary="List all Todos")
-async def read_all_by_user(request: Request):
+async def read_all_by_user(
+        request: Request,
+        completed: Optional[str] = Query(None, description="Filter by completion status"),
+        # Filter for completion status
+        sort_by: Optional[str] = Query(None, description="Sort by field (priority or title)"),  # Sort field
+        sort_order: Optional[int] = Query(1, description="Sort order: 1 (asc) or -1 (desc)")  # Sort order
+):
     user = await get_current_user(request)
     if user is None:
         return RedirectResponse(url="/auth", status_code=status.HTTP_302_FOUND)
-    query = "SELECT * FROM todos WHERE owner_id = %s ORDER BY id;"
-    # todos = execute_query(query, (user["id"],))
+
+    # Base query to fetch todos
+    query = "SELECT * FROM todos WHERE owner_id = %s"
+    query_params = [user["id"]]
+
+    # Apply filtering if needed
+    if completed and completed != "all":
+        query += " AND complete = %s"
+        query_params.append(completed.lower() == 'true')  # 'true' or 'false' as boolean
+
+    # Apply sorting if needed
+    if sort_by:
+        query += f" ORDER BY {sort_by} {'ASC' if sort_order == 1 else 'DESC'}"
+
+    # Execute the query and fetch todos
     todos = [
         {
             "id": t[0],
@@ -28,10 +47,12 @@ async def read_all_by_user(request: Request):
             "priority": t[3],
             "complete": t[4],
             "owner_id": t[5],
-            "categories": []  # Пізніше сюди додамо категорії
+            "categories": []  # Add categories later
         }
-        for t in execute_query(query, (user["id"],), fetch=True)
+        for t in execute_query(query, tuple(query_params), fetch=True)
     ]
+
+    # Fetch categories for each todo
     for todo in todos:
         query = """
         SELECT c.id, c.name FROM categories c
@@ -41,10 +62,14 @@ async def read_all_by_user(request: Request):
         categories = execute_query(query, (todo["id"],), fetch=True)
         todo["categories"] = [{"id": c[0], "name": c[1]} for c in categories]
 
-    if todos is None:
+    # If no todos found, return an empty list
+    if not todos:
         todos = []
 
-    return templates.TemplateResponse("home.html", {"request": request, "todos": todos, "user": user})
+    # Render the template with todos, user, and completed filter
+    return templates.TemplateResponse("home.html", {
+        "request": request, "todos": todos, "user": user, "completed": completed
+    })
 
 @router.get("/add-todo", response_class=HTMLResponse, summary="Display Add Todo Form")
 async def add_new_todo(request: Request):
