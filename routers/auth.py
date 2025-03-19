@@ -11,13 +11,18 @@ from datetime import datetime, timedelta
 from jose import jwt, JWTError
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from database import execute_query, fetch_one, fetch_all
+from pymongo import MongoClient
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
 SECRET_KEY = "KlgH6AzYDeZeGwD288to79I3vTHT8wp7"
 ALGORITHM = "HS256"
 
 templates = Jinja2Templates(directory="templates")
+
+# Підключення до MongoDB
+client = MongoClient("mongodb://localhost:27017/")
+db = client['todo-app']
+users_collection = db['users']
 
 bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -56,13 +61,13 @@ def verify_password(plain_password, hashed_password):
 
 
 def authenticate_user(username: str, password: str):
-    user = fetch_one("SELECT * FROM users WHERE username = %s", (username,))
+    user = users_collection.find_one({"username": username})
     if not user or not verify_password(password, user['hashed_password']):
-        return False
+        return None
     return user
 
 
-def create_access_token(username: str, user_id: int, role: str,
+def create_access_token(username: str, user_id: str, role: str,
                         expires_delta: Optional[timedelta] = None):
     encode = {"sub": username, "id": user_id, "role": role}
     expire = datetime.utcnow() + (expires_delta if expires_delta else timedelta(minutes=15))
@@ -90,7 +95,7 @@ async def login_for_access_token(response: Response, form_data: OAuth2PasswordRe
     user = authenticate_user(form_data.username, form_data.password)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid username or password")
-    token = create_access_token(user['username'], user['id'], user['role'], expires_delta=timedelta(minutes=60))
+    token = create_access_token(user['username'], str(user['_id']), user['role'], expires_delta=timedelta(minutes=60))
     response.set_cookie(key="access_token", value=token, httponly=True)
     return {"access_token": token, "token_type": "bearer"}
 
@@ -113,15 +118,23 @@ async def register_user(request: Request, email: str = Form(...), username: str 
     if password != password2:
         return templates.TemplateResponse("register.html", {"request": request, "msg": "Passwords do not match"})
 
-    existing_user = fetch_one("SELECT * FROM users WHERE username = %s OR email = %s", (username, email))
+    # Перевірка на існування користувача
+    existing_user = users_collection.find_one({"$or": [{"username": username}, {"email": email}]})
     if existing_user:
-        return templates.TemplateResponse("register.html",
-                                          {"request": request, "msg": "Username or email already taken"})
+        return templates.TemplateResponse("register.html", {"request": request, "msg": "Username or email already taken"})
 
     hashed_password = get_password_hash(password)
-    execute_query(
-        "INSERT INTO users (username, email, first_name, last_name, hashed_password, is_active, role) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-        (username, email, firstname, lastname, hashed_password, True, "user"), fetch=False)
+
+    # Додавання користувача до MongoDB
+    users_collection.insert_one({
+        "username": username,
+        "email": email,
+        "first_name": firstname,
+        "last_name": lastname,
+        "hashed_password": hashed_password,
+        "is_active": True,
+        "role": "user"
+    })
 
     return templates.TemplateResponse("login.html", {"request": request, "msg": "User successfully created"})
 
@@ -139,6 +152,6 @@ async def login(request: Request):
     user = authenticate_user(form.username, form.password)
     if not user:
         return templates.TemplateResponse("login.html", {"request": request, "msg": "Incorrect Username or Password"})
-    token = create_access_token(user['username'], user['id'], user['role'], expires_delta=timedelta(minutes=60))
+    token = create_access_token(user['username'], str(user['_id']), user['role'], expires_delta=timedelta(minutes=60))
     response.set_cookie(key="access_token", value=token, httponly=True)
     return response

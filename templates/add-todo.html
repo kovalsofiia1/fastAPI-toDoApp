@@ -29,7 +29,7 @@
                     <label>Categories</label>
                     <select class="form-control" name="category_ids" multiple>
                         {% for category in categories %}
-                        <option value="{{ category.id }}">{{ category.name }}</option>
+                        <option value="{{ category._id }}">{{ category.name }}</option>
                         {% endfor %}
                     </select>
                 </div>

@@ -7,67 +7,67 @@
             Edit your todo
         </div>
         <div class="card-body">
-          <form id="editTodoForm">
-            <input type="hidden" id="todoId" value="{{ todo.id }}">
+            <form id="editTodoForm">
+                <input type="hidden" id="todoId" value="{{ todo.id }}">
 
-            <div class="form-group">
-                <label>Title</label>
-                <input type="text" id="title" class="form-control" value="{{ todo.title }}" required>
-            </div>
-            <div class="form-group">
-                <label>Description</label>
-                <textarea id="description" class="form-control" rows="3" required>{{ todo.description }}</textarea>
-            </div>
-            <div class="form-group">
-                <label>Priority</label>
-                <select id="priority" class="form-control">
-                    <option {% if todo.priority == 1 %} selected {% endif %}>1</option>
-                    <option {% if todo.priority == 2 %} selected {% endif %}>2</option>
-                    <option {% if todo.priority == 3 %} selected {% endif %}>3</option>
-                    <option {% if todo.priority == 4 %} selected {% endif %}>4</option>
-                    <option {% if todo.priority == 5 %} selected {% endif %}>5</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Categories</label>
-                <select class="form-control" name="category_ids" multiple>
-                    {% for category in categories %}
-                    <option value="{{ category.id }}" {% if category.id in selected_categories %}selected{% endif %}>
-                        {{ category.name }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-            <button type="submit" class="btn btn-primary">Save Changes</button>
-        </form>
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" id="title" class="form-control" value="{{ todo.title }}" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="description" class="form-control" rows="3" required>{{ todo.description }}</textarea>
+                </div>
+                <div class="form-group">
+                    <label>Priority</label>
+                    <select id="priority" class="form-control">
+                        <option value="1" {% if todo.priority == 1 %}selected{% endif %}>1</option>
+                        <option value="2" {% if todo.priority == 2 %}selected{% endif %}>2</option>
+                        <option value="3" {% if todo.priority == 3 %}selected{% endif %}>3</option>
+                        <option value="4" {% if todo.priority == 4 %}selected{% endif %}>4</option>
+                        <option value="5" {% if todo.priority == 5 %}selected{% endif %}>5</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Categories</label>
+                    <select class="form-control" name="category_ids" multiple>
+                        {% for category in categories %}
+                        <option value="{{ category._id }}" {% if category._id in selected_categories %}selected{% endif %}>
+                            {{ category.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </form>
 
-        <script>
-            document.getElementById("editTodoForm").addEventListener("submit", async function(event) {
-                event.preventDefault();
+            <script>
+                document.getElementById("editTodoForm").addEventListener("submit", async function(event) {
+                    event.preventDefault();
 
-                const formData = new FormData();
-                formData.append("title", document.getElementById("title").value);
-                formData.append("description", document.getElementById("description").value);
-                formData.append("priority", document.getElementById("priority").value);
+                    const formData = new FormData();
+                    formData.append("title", document.getElementById("title").value);
+                    formData.append("description", document.getElementById("description").value);
+                    formData.append("priority", document.getElementById("priority").value);
 
-                // Додаємо всі обрані категорії
-                const selectedCategories = [...document.querySelectorAll("select[name='category_ids'] option:checked")].map(opt => opt.value);
-                selectedCategories.forEach(id => formData.append("category_ids", id));
+                    // Отримуємо обрані категорії
+                    const selectedCategories = [...document.querySelectorAll("select[name='category_ids'] option:checked")].map(opt => opt.value);
+                    selectedCategories.forEach(id => formData.append("category_ids", id));
 
-                const todoId = document.getElementById("todoId").value;
+                    const todoId = document.getElementById("todoId").value;
 
-                const response = await fetch(`/todos/edit-todo/${todoId}`, {
-                    method: "PUT",
-                    body: formData
+                    const response = await fetch(`/todos/edit-todo/${todoId}`, {
+                        method: "PUT",
+                        body: formData
+                    });
+
+                    if (response.ok) {
+                        window.location.href = "/todos";
+                    } else {
+                        alert("Error updating todo!");
+                    }
                 });
-
-                if (response.ok) {
-                    window.location.href = "/todos";
-                } else {
-                    alert("Error updating todo!");
-                }
-            });
-        </script>
+            </script>
         </div>
     </div>
 </div>
