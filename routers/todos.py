@@ -1,7 +1,7 @@
 from bson import ObjectId
 from fastapi import APIRouter, Request, Depends, HTTPException, Form, Path, Query
 from fastapi.responses import RedirectResponse, HTMLResponse
-from typing import List
+from typing import List, Optional
 
 from starlette import status
 from pymongo import MongoClient
@@ -22,27 +22,35 @@ router = APIRouter(
     responses={404: {"description": "Not found"}}
 )
 
-
 @router.get("/", response_class=HTMLResponse, summary="List all Todos")
-async def read_all_by_user(request: Request):
+async def read_all_by_user(
+    request: Request,
+    completed: Optional[str] = Query(None, description="Filter by completion status"),  # Changed to str to handle 'true'/'false' as string
+    sort_by: Optional[str] = Query(None, description="Sort by field (priority or title)"),
+    sort_order: Optional[int] = Query(1, description="Sort order: 1 (asc) or -1 (desc)")
+):
     user = await get_current_user(request)
     if user is None:
         return RedirectResponse(url="/auth", status_code=status.HTTP_302_FOUND)
 
-    todos = list(todos_collection.find({"owner_id": user["id"]}))
+    filter_query = {"owner_id": user["id"]}
+    print(completed)
+    if completed and completed != "all":
+        filter_query["complete"] = completed.lower() == 'true'
+
+    todos = list(todos_collection.find(filter_query))
 
     for todo in todos:
+        todo["categories"] = list(todo_category_collection.find({"todo_id": todo["_id"]}))
         todo["id"] = str(todo["_id"])
 
-        # Отримуємо категорії за списком ObjectId
-        category_ids = todo.get("categories", [])
-        if category_ids:
-            todo["categories"] = list(categories_collection.find({"_id": {"$in": category_ids}}))
-        else:
-            todo["categories"] = []
+    if sort_by:
+        todos.sort(key=lambda x: x.get(sort_by, ""), reverse=(sort_order == -1))
 
-    print(todos)  # Для дебагу
-    return templates.TemplateResponse("home.html", {"request": request, "todos": todos, "user": user})
+    return templates.TemplateResponse("home.html", {
+        "request": request, "todos": todos, "user": user, "completed": completed
+    })
+
 
 @router.get("/add-todo", response_class=HTMLResponse, summary="Display Add Todo Form")
 async def add_new_todo(request: Request):
