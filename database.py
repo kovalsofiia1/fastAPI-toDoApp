@@ -44,6 +44,6 @@ def execute_query(query, params=None, fetch=True):
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute(query, params)
-            if fetch:  # Якщо треба отримати результат
+            if fetch:
                 return cur.fetchall()
             conn.commit()

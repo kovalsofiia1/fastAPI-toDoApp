@@ -17,9 +17,8 @@ router = APIRouter(
 async def read_all_by_user(
         request: Request,
         completed: Optional[str] = Query(None, description="Filter by completion status"),
-        # Filter for completion status
-        sort_by: Optional[str] = Query(None, description="Sort by field (priority or title)"),  # Sort field
-        sort_order: Optional[int] = Query(1, description="Sort order: 1 (asc) or -1 (desc)")  # Sort order
+        sort_by: Optional[str] = Query(None, description="Sort by field (priority or title)"),
+        sort_order: Optional[int] = Query(1, description="Sort order: 1 (asc) or -1 (desc)")
 ):
     user = await get_current_user(request)
     if user is None:
@@ -32,7 +31,7 @@ async def read_all_by_user(
     # Apply filtering if needed
     if completed and completed != "all":
         query += " AND complete = %s"
-        query_params.append(completed.lower() == 'true')  # 'true' or 'false' as boolean
+        query_params.append(completed.lower() == 'true')
 
     # Apply sorting if needed
     if sort_by:
@@ -47,7 +46,7 @@ async def read_all_by_user(
             "priority": t[3],
             "complete": t[4],
             "owner_id": t[5],
-            "categories": []  # Add categories later
+            "categories": []
         }
         for t in execute_query(query, tuple(query_params), fetch=True)
     ]
@@ -62,11 +61,9 @@ async def read_all_by_user(
         categories = execute_query(query, (todo["id"],), fetch=True)
         todo["categories"] = [{"id": c[0], "name": c[1]} for c in categories]
 
-    # If no todos found, return an empty list
     if not todos:
         todos = []
 
-    # Render the template with todos, user, and completed filter
     return templates.TemplateResponse("home.html", {
         "request": request, "todos": todos, "user": user, "completed": completed
     })
